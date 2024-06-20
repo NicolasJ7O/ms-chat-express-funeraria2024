@@ -2,34 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socket.io Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        h2 {
+            margin-bottom: 10px;
+        }
+        #messages, #privateMessages {
+            list-style-type: none;
+            padding: 0;
+        }
+        #messages li, #privateMessages li {
+            margin-bottom: 5px;
+        }
+        input[type="text"], button {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h2>Chat Room of <label id="usernameChat"></label></h2>
+    <h2>Chat Room of <span id="usernameChat"></span></h2>
     <ul id="messages"></ul>
     <input id="messageInput" type="text" autocomplete="off" />
     <button onclick="sendMessage()">Send General Message</button>
-    <br />
-    <br />
+    <br><br>
     <h2>Private Chat</h2>
     <input id="recipientInput" placeholder="Recipient's username" />
-    <input id="privateMessageInput" autocomplete="off" type="text" />
+    <input id="privateMessageInput" type="text" autocomplete="off" />
     <button onclick="sendPrivateMessage()">Send Private Message</button>
     <ul id="privateMessages"></ul>
-    
+
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         const socket = io("http://localhost:3010");
 
         const username = prompt("Enter your username:");
         const codeRoom = prompt("Enter the code room:");
-        document.querySelector("#usernameChat").innerHTML = username;
+        document.getElementById("usernameChat").innerText = username;
+        
         if (username && codeRoom) {
             socket.emit("join", { username, code: codeRoom });
             alert("User joined: " + username);
         } else {
             alert("Username or code room missing!");
-            // Redireccionar al usuario a la página de login o a otra página de error
             window.location.href = "/login.html";
         }
 
@@ -39,8 +59,11 @@
 
         socket.on("joinError", (data) => {
             alert(data.error);
-            // Redireccionar al usuario a la página de login o a otra página de error
             window.location.href = "/login.html";
+        });
+
+        socket.on("previousMessages", (messages) => {
+            messages.forEach(displayMessage);
         });
 
         socket.on("messageFromServer", (data) => {
@@ -55,10 +78,14 @@
             const messageInput = document.getElementById("messageInput");
             const message = messageInput.value.trim();
             if (message !== "") {
-                socket.emit("messageFromClient", message);
+                const room = codeRoom; // Usar la sala a la que se unió el usuario
+                socket.emit("messageFromClient", { message, room });
                 messageInput.value = "";
             }
         }
+        socket.on("previousMessages", (messages) => {
+            messages.forEach(displayMessage); // Asumiendo que displayMessage está definido para mostrar mensajes
+        });
 
         function sendPrivateMessage() {
             const recipientInput = document.getElementById("recipientInput");
